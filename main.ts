@@ -42,19 +42,16 @@ export default class VoiceMDPlugin extends Plugin {
 			new Notice(`Voice MD has ${pendingCount} pending transcription${pendingCount === 1 ? '' : 's'}. Run “Retry pending voice transcriptions” to continue.`, 10000);
 		}
 
-		this.addRibbonIcon('voicemail', 'Start voice recording', () => {
-			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (view) {
-				void this.createVoiceCommand().execute(view.editor);
-			}
+		this.addRibbonIcon('voicemail', 'Start linked voice recording', () => {
+			void this.createVoiceCommand().execute(undefined, { linkedVoiceNote: true });
 		});
 
 		this.addCommand({
 			id: 'start-voice-recording',
 			name: 'Start voice recording',
 			icon: 'voicemail',
-			editorCallback: (editor: Editor) => {
-				void this.createVoiceCommand().execute(editor);
+			callback: () => {
+				void this.createVoiceCommand().execute(undefined, { linkedVoiceNote: true });
 			},
 		});
 
@@ -64,6 +61,15 @@ export default class VoiceMDPlugin extends Plugin {
 			icon: 'voicemail',
 			callback: () => {
 				void this.createVoiceCommand().execute(undefined, { linkedVoiceNote: true });
+			},
+		});
+
+		this.addCommand({
+			id: 'start-legacy-voice-recording',
+			name: 'Start legacy voice recording',
+			icon: 'voicemail',
+			editorCallback: (editor: Editor) => {
+				void this.createVoiceCommand().execute(editor);
 			},
 		});
 
