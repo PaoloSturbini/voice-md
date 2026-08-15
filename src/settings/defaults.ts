@@ -13,4 +13,8 @@ export const DEFAULT_SETTINGS: VoiceMDSettings = {
 	dailyNoteFolder: '',
 	dailyNoteFormat: 'YYYY-MM-DD',
 	use24HourTime: true,
+	voiceNotesFolder: 'Voice Notes',
+	organizeVoiceNotesByDate: true,
+	generateVoiceNoteTitle: true,
+	linkedVoiceNoteHeading: '## \uD83C\uDF99\uFE0F Voice Notes',
 };
