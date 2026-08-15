@@ -6,9 +6,7 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]+-*"
     branches:
-      - master
-    paths:
-      - manifest.json
+      - "release/*"
 
 jobs:
   release:
@@ -19,28 +17,38 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v6
-
-      - name: Resolve release version
-        id: release
-        shell: bash
-        run: |
-          version="$(node -p "require('./manifest.json').version")"
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            tag="$GITHUB_REF_NAME"
-            if [[ "$tag" != "$version" ]]; then
-              echo "Release tag $tag does not match manifest version $version."
-              exit 1
-            fi
-          else
-            tag="$version"
-          fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
+
+      - name: Resolve and prepare release version
+        id: release
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
+            version="${GITHUB_REF_NAME#release/}"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$ ]]; then
+              echo "Invalid release branch version: $version"
+              exit 1
+            fi
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            node update-version.mjs "$version"
+            tag="$version"
+          else
+            tag="$GITHUB_REF_NAME"
+            version="$(node -p "require('./manifest.json').version")"
+            if [[ "$tag" != "$version" ]]; then
+              echo "Release tag $tag does not match manifest version $version."
+              exit 1
+            fi
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Build and lint plugin
         run: |
@@ -56,7 +64,15 @@ jobs:
             main.js
             styles.css
 
-      - name: Create release
+      - name: Publish release branch to master and tag
+        if: github.ref_type == 'branch'
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git push origin HEAD:master
+          git push origin "$RELEASE_TAG"
+
+      - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
@@ -66,7 +82,7 @@ jobs:
             exit 0
           fi
 
-          release_args=(--title "$RELEASE_TAG" --generate-notes --target "$GITHUB_SHA")
+          release_args=(--title "$RELEASE_TAG" --generate-notes --target "$RELEASE_TAG")
           if [[ "$RELEASE_TAG" == *-* ]]; then
             release_args+=(--prerelease)
           fi
