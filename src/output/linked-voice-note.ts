@@ -120,7 +120,9 @@ export class LinkedVoiceNoteWriter {
 	private sanitizeTitle(title: string): string {
 		return title
 			.replace(/[\r\n]+/g, ' ')
-			.replace(/[\[\]|]/g, '')
+			.replaceAll('[', '')
+			.replaceAll(']', '')
+			.replaceAll('|', '')
 			.replace(/\s+/g, ' ')
 			.trim()
 			.slice(0, 120);
