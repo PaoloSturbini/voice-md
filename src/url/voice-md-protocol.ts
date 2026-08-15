@@ -27,6 +27,16 @@ export class VoiceMDProtocolHandler {
 
 		await this.waitForLayoutReady();
 
+		const autoStart = this.isTruthy(this.getParam(data, 'autostart'));
+		const linkedVoiceNote = this.isTruthy(this.getParam(data, 'linked'));
+		if (linkedVoiceNote) {
+			this.createVoiceCommand().execute(undefined, {
+				autoStart,
+				linkedVoiceNote: true,
+			});
+			return;
+		}
+
 		let openedPath: string | undefined;
 		const targetPath = this.getTargetPath(data);
 		if (targetPath) {
@@ -48,7 +58,6 @@ export class VoiceMDProtocolHandler {
 			return;
 		}
 
-		const autoStart = this.isTruthy(this.getParam(data, 'autostart'));
 		this.createVoiceCommand().execute(editor, {
 			autoStart,
 			insertionMode: 'append-to-end',
