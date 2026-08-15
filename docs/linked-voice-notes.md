@@ -1,6 +1,6 @@
 # Linked voice notes
 
-This fork adds a linked voice-note workflow for Obsidian mobile.
+This fork adds a linked voice-note workflow for Obsidian mobile. The feature is opt-in: the original Voice MD behavior remains unchanged unless you use `linked=true` or the dedicated linked-recording command.
 
 ## What it does
 
