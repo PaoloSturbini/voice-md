@@ -14,6 +14,10 @@ export interface VoiceMDSettings {
 	dailyNoteFolder: string;
 	dailyNoteFormat: string;
 	use24HourTime: boolean;
+	voiceNotesFolder: string;
+	organizeVoiceNotesByDate: boolean;
+	generateVoiceNoteTitle: boolean;
+	linkedVoiceNoteHeading: string;
 }
 
 export interface VoiceMDStoredData {
@@ -42,6 +46,7 @@ export interface TranscriptionJob {
 	postProcessingPrompt?: string;
 	insertionMode?: 'cursor' | 'append-to-end';
 	targetPath?: string;
+	linkedVoiceNote?: boolean;
 	rawPath?: string;
 	structuredPath?: string;
 }
