@@ -1,3 +1,4 @@
+/* eslint-disable obsidianmd/ui/sentence-case -- Literal folder names, date formats, paths, and Markdown headings must preserve their configured case. */
 import { App, MarkdownView, normalizePath, PluginSettingTab, Setting } from 'obsidian';
 import type VoiceMDPlugin from '../../main';
 import {
