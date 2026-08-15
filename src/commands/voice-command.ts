@@ -6,6 +6,7 @@ import { TranscriptionJob, VoiceMDError, VoiceMDSettings } from '../types';
 import { IndexedDBAudioStore } from '../storage/indexeddb-audio-store';
 import { JobQueue, isRetryableJobError } from '../jobs/job-queue';
 import { TranscriptionFiles } from '../output/transcription-files';
+import { LinkedVoiceNoteWriter } from '../output/linked-voice-note';
 import { ApiKeyStore } from '../secrets/api-key-store';
 
 /**
@@ -16,6 +17,7 @@ export interface VoiceCommandOptions {
 	autoStart?: boolean;
 	insertionMode?: 'cursor' | 'append-to-end';
 	targetPath?: string;
+	linkedVoiceNote?: boolean;
 }
 
 export class VoiceCommand {
@@ -28,7 +30,7 @@ export class VoiceCommand {
 		private readonly apiKeyStore: ApiKeyStore
 	) {}
 
-	execute(editor: Editor, options?: VoiceCommandOptions): void {
+	execute(editor?: Editor, options?: VoiceCommandOptions): void {
 		const apiKey = this.apiKeyStore.getApiKey();
 		if (!apiKey.trim()) {
 			new Notice('OpenAI API key not configured, please set it in Voice MD settings', 6000);
@@ -62,7 +64,7 @@ export class VoiceCommand {
 		}
 	}
 
-	private async handleRecording(audioBlob: Blob, editor: Editor, meetingMode: boolean, enablePostProcessing: boolean, options?: VoiceCommandOptions): Promise<void> {
+	private async handleRecording(audioBlob: Blob, editor: Editor | undefined, meetingMode: boolean, enablePostProcessing: boolean, options?: VoiceCommandOptions): Promise<void> {
 		let notice = new Notice('Saving recording safely...', 0);
 		try {
 			const audioKey = `audio-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -78,6 +80,7 @@ export class VoiceCommand {
 				postProcessingPrompt: this.settings.postProcessingPrompt,
 				insertionMode: options?.insertionMode ?? 'cursor',
 				targetPath: options?.targetPath,
+				linkedVoiceNote: options?.linkedVoiceNote ?? false,
 			});
 
 			notice.hide();
@@ -123,6 +126,12 @@ export class VoiceCommand {
 				formattedText = this.formatWithSpeakers(result.segments);
 			}
 
+			if (processingJob.linkedVoiceNote) {
+				await this.saveLinkedVoiceNote(processingJob, formattedText, client, activeNotice);
+				await this.audioStore.delete(processingJob.audioKey).catch(() => undefined);
+				return;
+			}
+
 			const files = new TranscriptionFiles(this.app);
 			const raw = await files.saveRaw(formattedText);
 			let structuredPath: string | undefined;
@@ -152,6 +161,34 @@ export class VoiceCommand {
 			ErrorHandler.handle(error);
 			if (retryable) new Notice('Recording was saved. Retry later with the Voice MD retry command.', 8000);
 		}
+	}
+
+	private async saveLinkedVoiceNote(job: TranscriptionJob, formattedText: string, client: OpenAIClient, notice: Notice): Promise<void> {
+		let noteText = formattedText;
+		if (job.enablePostProcessing) {
+			notice.hide();
+			new Notice('Structuring linked voice note...', 2500);
+			try {
+				noteText = await client.structureText(formattedText, job.chatModel, job.postProcessingPrompt);
+			} catch (error) {
+				console.warn('Voice MD linked-note post-processing failed; using raw transcript instead.', error);
+			}
+		}
+
+		let title = 'Voice note';
+		if (this.settings.generateVoiceNoteTitle) {
+			try {
+				title = await client.generateTitle(formattedText, job.chatModel);
+			} catch (error) {
+				console.warn('Voice MD title generation failed; using fallback title.', error);
+			}
+		}
+
+		const writer = new LinkedVoiceNoteWriter(this.app, this.settings);
+		const linked = await writer.saveAndLink(noteText, title, new Date(job.createdAt));
+		await this.jobQueue.markSucceeded(job.id, linked.notePath);
+		notice.hide();
+		new Notice(`Voice note saved and linked: ${linked.title}`, 5000);
 	}
 
 	private async insertResult(job: TranscriptionJob, insertionText: string, editor?: Editor): Promise<void> {

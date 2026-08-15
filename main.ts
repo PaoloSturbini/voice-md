@@ -59,6 +59,15 @@ export default class VoiceMDPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: 'start-linked-voice-recording',
+			name: 'Start linked voice recording',
+			icon: 'voicemail',
+			callback: () => {
+				void this.createVoiceCommand().execute(undefined, { linkedVoiceNote: true });
+			},
+		});
+
+		this.addCommand({
 			id: 'retry-pending-transcriptions',
 			name: 'Retry pending voice transcriptions',
 			callback: () => {

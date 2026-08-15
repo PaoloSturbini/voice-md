@@ -93,6 +93,28 @@ export class OpenAIClient {
 		return 'webm';
 	}
 
+	/** Generate a short title for a linked voice note. */
+	async generateTitle(rawText: string, model: string): Promise<string> {
+		try {
+			const completion = await this.client.chat.completions.create({
+				model,
+				messages: [
+					{
+						role: 'system',
+						content: 'Create a concise title for a voice note. Use the same language as the note, use at most seven words, and return only the title with no quotation marks or final punctuation.'
+					},
+					{
+						role: 'user',
+						content: rawText
+					}
+				]
+			});
+			return completion.choices[0]?.message.content?.trim() || 'Voice note';
+		} catch (error) {
+			throw ErrorHandler.fromOpenAIError(error, true);
+		}
+	}
+
 	/**
 	 * Structure raw text into formatted markdown using OpenAI chat completions
 	 * @param rawText The raw transcription text to structure
