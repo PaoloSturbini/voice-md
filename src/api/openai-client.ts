@@ -17,6 +17,13 @@ export class OpenAIClient {
 		});
 	}
 
+	/**
+	 * Transcribe an audio blob using OpenAI Audio Transcription API
+	 * @param audioBlob The recorded audio blob
+	 * @param options Optional transcription parameters
+	 * @param enableMeetingMode Enable speaker diarization (uses gpt-4o-transcribe-diarize)
+	 * @returns Transcription result with text and metadata
+	 */
 	async transcribe(
 		audioBlob: Blob,
 		options?: TranscriptionOptions,
@@ -27,13 +34,20 @@ export class OpenAIClient {
 				throw new Error(`AUDIO_TOO_LARGE:${audioBlob.size}`);
 			}
 
+			// Convert Blob to File (required by OpenAI SDK)
 			const audioFile = new File([audioBlob], `recording.${this.extensionForType(audioBlob.type)}`, {
 				type: audioBlob.type
 			});
 
+			// Determine model based on meeting mode
+			// gpt-4o-transcribe-diarize: Supports speaker diarization
+			// gpt-4o-mini-transcribe: Fast, cost-effective standard transcription
 			const model = enableMeetingMode ? 'gpt-4o-transcribe-diarize' : 'gpt-4o-mini-transcribe';
 			const responseFormat = enableMeetingMode ? 'diarized_json' : 'json';
 
+			// Build transcription parameters
+			// Note: Using a flexible object type because OpenAI SDK's type doesn't include
+			// all parameters like timestamp_granularities for diarization
 			const transcriptionParams: OpenAI.Audio.Transcriptions.TranscriptionCreateParams & {
 				timestamp_granularities?: string[];
 			} = {
@@ -44,11 +58,15 @@ export class OpenAIClient {
 				response_format: responseFormat,
 			};
 
+			// Add timestamp granularities for segment-level data (required for diarization)
 			if (enableMeetingMode) {
 				transcriptionParams.timestamp_granularities = ['segment'];
 			}
 
 			const response = await this.client.audio.transcriptions.create(transcriptionParams);
+
+			// Parse response - OpenAI API returns additional fields beyond the base type
+			// Cast to our extended interface that includes language, duration, and segments
 			const extendedResponse = response as unknown as ExtendedTranscriptionResponse;
 
 			return {
@@ -57,10 +75,12 @@ export class OpenAIClient {
 				duration: extendedResponse.duration,
 				segments: enableMeetingMode ? extendedResponse.segments : undefined
 			};
+
 		} catch (error) {
 			if (error instanceof Error && error.message.startsWith('AUDIO_TOO_LARGE:')) {
 				throw ErrorHandler.audioTooLarge(audioBlob.size, OPENAI_TRANSCRIPTION_MAX_BYTES);
 			}
+			// Convert to VoiceMDError and throw
 			throw ErrorHandler.fromOpenAIError(error);
 		}
 	}
@@ -73,6 +93,7 @@ export class OpenAIClient {
 		return 'webm';
 	}
 
+	/** Generate a short title for a linked voice note. */
 	async generateTitle(rawText: string, model: string): Promise<string> {
 		try {
 			const completion = await this.client.chat.completions.create({
@@ -94,6 +115,13 @@ export class OpenAIClient {
 		}
 	}
 
+	/**
+	 * Structure raw text into formatted markdown using OpenAI chat completions
+	 * @param rawText The raw transcription text to structure
+	 * @param model The GPT model to use (e.g., 'gpt-4o-mini', 'gpt-4o')
+	 * @param customPrompt Optional custom system prompt to override default
+	 * @returns Formatted markdown text
+	 */
 	async structureText(
 		rawText: string,
 		model: string,
@@ -101,27 +129,29 @@ export class OpenAIClient {
 	): Promise<string> {
 		try {
 			const systemPrompt = customPrompt ||
-				'You are a helpful assistant that formats voice transcriptions into well-structured markdown. ' +
-				'Use appropriate headings (##, ###), bullet points, numbered lists, and paragraphs. ' +
-				'IMPORTANT: If the text contains speaker labels (e.g., **Speaker 1:**), preserve them exactly. ' +
-				'Preserve all content from the original transcription while improving readability.';
+				"You are a helpful assistant that formats voice transcriptions into well-structured markdown. " +
+				"Use appropriate headings (##, ###), bullet points, numbered lists, and paragraphs. " +
+				"IMPORTANT: If the text contains speaker labels (e.g., **Speaker 1:**), preserve them exactly. " +
+				"Preserve all content from the original transcription while improving readability.";
 
 			const completion = await this.client.chat.completions.create({
 				model: model,
 				messages: [
 					{
-						role: 'system',
+						role: "system",
 						content: systemPrompt
 					},
 					{
-						role: 'user',
+						role: "user",
 						content: `Format the following transcription as clear markdown:\n\n${rawText}`
 					}
 				]
 			});
 
 			return completion.choices[0]?.message.content || rawText;
+
 		} catch (error) {
+			// Convert to VoiceMDError and throw
 			throw ErrorHandler.fromOpenAIError(error, true);
 		}
 	}
