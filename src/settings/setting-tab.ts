@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/ui/sentence-case -- Literal folder names, date formats, paths, and Markdown headings must preserve their configured case. */
 import { App, MarkdownView, normalizePath, PluginSettingTab, Setting } from 'obsidian';
 import type VoiceMDPlugin from '../../main';
 import {
@@ -105,9 +104,9 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Daily note folder')
-			.setDesc('Folder used for linked voice-note backlinks. Leave blank to use "Daily Notes".')
+			.setDesc('Folder used for linked voice-note backlinks. Leave blank to use "daily notes".')
 			.addText(text => text
-				.setPlaceholder('Daily Notes')
+				.setPlaceholder('Daily notes')
 				.setValue(this.plugin.pluginSettings.dailyNoteFolder)
 				.onChange(async (value) => {
 					this.plugin.pluginSettings.dailyNoteFolder = normalizePath(value);
@@ -118,7 +117,7 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 			.setName('Daily note date format')
 			.setDesc('Date format for linked voice-note backlinks. Match your daily notes settings.')
 			.addText(text => text
-				.setPlaceholder('YYYY-MM-DD')
+				.setPlaceholder('Yyyy-mm-dd')
 				.setValue(this.plugin.pluginSettings.dailyNoteFormat)
 				.onChange(async (value) => {
 					this.plugin.pluginSettings.dailyNoteFormat = value.trim() || 'YYYY-MM-DD';
@@ -129,7 +128,7 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 			.setName('Voice notes folder')
 			.setDesc('Folder where linked voice-note Markdown files are created.')
 			.addText(text => text
-				.setPlaceholder('Voice Notes')
+				.setPlaceholder('Voice notes')
 				.setValue(this.plugin.pluginSettings.voiceNotesFolder)
 				.onChange(async (value) => {
 					this.plugin.pluginSettings.voiceNotesFolder = normalizePath(value.trim() || 'Voice Notes');
@@ -138,7 +137,7 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Organize voice notes by year/month')
-			.setDesc('Store linked notes under Voice Notes/YYYY/MM/.')
+			.setDesc('Store linked notes under voice notes/yyyy/mm/.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.pluginSettings.organizeVoiceNotesByDate)
 				.onChange(async (value) => {
@@ -160,7 +159,7 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 			.setName('Linked voice-note heading')
 			.setDesc('Heading under which the wikilink is inserted in the daily note. It is created automatically if missing.')
 			.addText(text => text
-				.setPlaceholder('## 🎙️ Voice Notes')
+				.setPlaceholder('## 🎙️ voice notes')
 				.setValue(this.plugin.pluginSettings.linkedVoiceNoteHeading)
 				.onChange(async (value) => {
 					this.plugin.pluginSettings.linkedVoiceNoteHeading = value.trim() || '## 🎙️ Voice Notes';
