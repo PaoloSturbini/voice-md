@@ -36,9 +36,13 @@ jobs:
               echo "Invalid release branch version: $version"
               exit 1
             fi
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            node update-version.mjs "$version"
+
+            current_version="$(node -p "require('./manifest.json').version")"
+            if [[ "$current_version" != "$version" ]]; then
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              node update-version.mjs "$version"
+            fi
             tag="$version"
           else
             tag="$GITHUB_REF_NAME"
@@ -69,8 +73,18 @@ jobs:
         env:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: |
-          git push origin HEAD:master
-          git push origin "$RELEASE_TAG"
+          if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/master)" ]]; then
+            git push origin HEAD:master
+          fi
+
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            if ! git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+              git tag -a "$RELEASE_TAG" -m "Version $RELEASE_TAG"
+            fi
+            git push origin "$RELEASE_TAG"
+          fi
 
       - name: Create GitHub release
         env:
@@ -82,7 +96,7 @@ jobs:
             exit 0
           fi
 
-          release_args=(--title "$RELEASE_TAG" --generate-notes --target "$RELEASE_TAG")
+          release_args=(--title "$RELEASE_TAG" --generate-notes)
           if [[ "$RELEASE_TAG" == *-* ]]; then
             release_args+=(--prerelease)
           fi
