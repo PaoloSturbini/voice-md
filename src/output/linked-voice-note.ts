@@ -43,7 +43,8 @@ export class LinkedVoiceNoteWriter {
 
 	private async appendLinkToDailyNote(notePath: string, title: string, timestamp: Date): Promise<string> {
 		const fileName = `${this.format(timestamp, this.settings.dailyNoteFormat || 'YYYY-MM-DD')}.md`;
-		const dailyNotePath = normalizePath([this.settings.dailyNoteFolder, fileName].filter(Boolean).join('/'));
+		const dailyFolder = this.settings.dailyNoteFolder?.trim() || 'Daily Notes';
+		const dailyNotePath = normalizePath([dailyFolder, fileName].filter(Boolean).join('/'));
 		await this.ensureParentFolders(dailyNotePath);
 
 		let dailyFile = this.app.vault.getAbstractFileByPath(dailyNotePath);

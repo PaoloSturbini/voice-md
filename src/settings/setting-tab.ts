@@ -104,9 +104,9 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Daily note folder')
-			.setDesc('Folder for iOS shortcut daily-note URLs. Match your daily notes settings, or leave blank for the vault root.')
+			.setDesc('Folder used for linked voice-note backlinks. Leave blank to use "daily notes".')
 			.addText(text => text
-				.setPlaceholder('Daily')
+				.setPlaceholder('Daily notes')
 				.setValue(this.plugin.pluginSettings.dailyNoteFolder)
 				.onChange(async (value) => {
 					this.plugin.pluginSettings.dailyNoteFolder = normalizePath(value);
@@ -115,9 +115,9 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Daily note date format')
-			.setDesc('Date format for iOS shortcut daily-note URLs. Match your daily notes settings.')
+			.setDesc('Date format for linked voice-note backlinks. Match your daily notes settings.')
 			.addText(text => text
-				.setPlaceholder('Enter a date format')
+				.setPlaceholder('Yyyy-mm-dd')
 				.setValue(this.plugin.pluginSettings.dailyNoteFormat)
 				.onChange(async (value) => {
 					this.plugin.pluginSettings.dailyNoteFormat = value.trim() || 'YYYY-MM-DD';
@@ -125,8 +125,50 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Voice notes folder')
+			.setDesc('Folder where linked voice-note Markdown files are created.')
+			.addText(text => text
+				.setPlaceholder('Voice notes')
+				.setValue(this.plugin.pluginSettings.voiceNotesFolder)
+				.onChange(async (value) => {
+					this.plugin.pluginSettings.voiceNotesFolder = normalizePath(value.trim() || 'Voice Notes');
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Organize voice notes by year/month')
+			.setDesc('Store linked notes under voice notes/yyyy/mm/.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.pluginSettings.organizeVoiceNotesByDate)
+				.onChange(async (value) => {
+					this.plugin.pluginSettings.organizeVoiceNotesByDate = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Generate AI title')
+			.setDesc('Generate a short title for each linked voice note using the configured OpenAI chat model.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.pluginSettings.generateVoiceNoteTitle)
+				.onChange(async (value) => {
+					this.plugin.pluginSettings.generateVoiceNoteTitle = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Linked voice-note heading')
+			.setDesc('Heading under which the wikilink is inserted in the daily note. It is created automatically if missing.')
+			.addText(text => text
+				.setPlaceholder('## 🎙️ voice notes')
+				.setValue(this.plugin.pluginSettings.linkedVoiceNoteHeading)
+				.onChange(async (value) => {
+					this.plugin.pluginSettings.linkedVoiceNoteHeading = value.trim() || '## 🎙️ Voice Notes';
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Use 24-hour time')
-			.setDesc('Use 24-hour timestamps for recordings appended by iOS shortcut URLs. Turn off for am/pm.')
+			.setDesc('Use 24-hour timestamps for linked voice-note entries. Turn off for am/pm.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.pluginSettings.use24HourTime)
 				.onChange(async (value) => {
@@ -147,7 +189,7 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Enable post-processing')
-			.setDesc('Structure transcriptions into formatted Markdown using GPT. Raw transcript is saved first, then structured output is created if this is enabled.')
+			.setDesc('Structure transcriptions into formatted Markdown using GPT. Linked voice notes keep their dedicated Markdown file and daily-note backlink.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.pluginSettings.enablePostProcessing)
 				.onChange(async (value) => {
